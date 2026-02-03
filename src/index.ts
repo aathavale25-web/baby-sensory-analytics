@@ -29,7 +29,9 @@ import {
   computeWeeklySummary,
   computeThemeRankings,
   computeColorEngagement,
-  computeTimingPatterns
+  computeTimingPatterns,
+  computeEngagementTrends,
+  computeWeekOverWeekComparison
 } from './resources/insights.js';
 
 // Initialize database (now using Supabase instead of local file)
@@ -93,6 +95,18 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
         uri: 'baby-sensory://export/all',
         name: 'Export All Data',
         description: 'Export all sessions as JSON',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'baby-sensory://insights/engagement-trends',
+        name: 'Engagement Trends',
+        description: 'Track engagement progression over time with daily/weekly trends',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'baby-sensory://insights/week-over-week',
+        name: 'Week over Week Comparison',
+        description: 'Compare current week vs previous week performance',
         mimeType: 'application/json',
       },
     ],
@@ -200,6 +214,34 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             uri,
             mimeType: 'application/json',
             text: JSON.stringify(timing, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'baby-sensory://insights/engagement-trends') {
+      const sessions = await listSessions(db);
+      const trends = computeEngagementTrends(sessions);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(trends, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'baby-sensory://insights/week-over-week') {
+      const sessions = await listSessions(db);
+      const comparison = computeWeekOverWeekComparison(sessions);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(comparison, null, 2),
           },
         ],
       };

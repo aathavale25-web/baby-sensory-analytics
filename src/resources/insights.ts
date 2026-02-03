@@ -174,3 +174,181 @@ export function computeTimingPatterns(sessions: Session[]): {
 
   return { byHour, byDayOfWeek, bestTime };
 }
+
+/**
+ * Compute engagement trends over time
+ * Shows daily engagement progression and identifies trends
+ */
+export function computeEngagementTrends(sessions: Session[]): {
+  daily: Array<{ date: string; touches: number; sessions: number }>;
+  weekly: Array<{ week: string; touches: number; sessions: number; avgTouches: number }>;
+  trend: 'improving' | 'stable' | 'declining';
+  growthRate: number;
+} {
+  if (sessions.length === 0) {
+    return {
+      daily: [],
+      weekly: [],
+      trend: 'stable',
+      growthRate: 0
+    };
+  }
+
+  // Group by day
+  const dailyStats: Record<string, { touches: number; sessions: number }> = {};
+
+  sessions.forEach(session => {
+    const date = new Date(session.timestamp);
+    const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    if (!dailyStats[dateKey]) {
+      dailyStats[dateKey] = { touches: 0, sessions: 0 };
+    }
+    dailyStats[dateKey].touches += session.touches;
+    dailyStats[dateKey].sessions += 1;
+  });
+
+  const daily = Object.entries(dailyStats)
+    .map(([date, stats]) => ({ date, ...stats }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Group by week
+  const weeklyStats: Record<string, { touches: number; sessions: number }> = {};
+
+  sessions.forEach(session => {
+    const date = new Date(session.timestamp);
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+    const weekKey = weekStart.toISOString().split('T')[0];
+
+    if (!weeklyStats[weekKey]) {
+      weeklyStats[weekKey] = { touches: 0, sessions: 0 };
+    }
+    weeklyStats[weekKey].touches += session.touches;
+    weeklyStats[weekKey].sessions += 1;
+  });
+
+  const weekly = Object.entries(weeklyStats)
+    .map(([week, stats]) => ({
+      week,
+      touches: stats.touches,
+      sessions: stats.sessions,
+      avgTouches: Math.round(stats.touches / stats.sessions)
+    }))
+    .sort((a, b) => a.week.localeCompare(b.week));
+
+  // Calculate trend (based on last 2 weeks if available)
+  let trend: 'improving' | 'stable' | 'declining' = 'stable';
+  let growthRate = 0;
+
+  if (weekly.length >= 2) {
+    const lastWeek = weekly[weekly.length - 1];
+    const prevWeek = weekly[weekly.length - 2];
+    const change = lastWeek.avgTouches - prevWeek.avgTouches;
+    growthRate = Math.round((change / prevWeek.avgTouches) * 100);
+
+    if (growthRate > 10) trend = 'improving';
+    else if (growthRate < -10) trend = 'declining';
+  }
+
+  return { daily, weekly, trend, growthRate };
+}
+
+/**
+ * Compare current week vs previous week
+ */
+export function computeWeekOverWeekComparison(sessions: Session[]): {
+  currentWeek: {
+    sessions: number;
+    touches: number;
+    avgTouches: number;
+    completionRate: number;
+    topTheme: string;
+  };
+  previousWeek: {
+    sessions: number;
+    touches: number;
+    avgTouches: number;
+    completionRate: number;
+    topTheme: string;
+  };
+  changes: {
+    sessions: { value: number; percent: number };
+    touches: { value: number; percent: number };
+    avgTouches: { value: number; percent: number };
+    completionRate: { value: number; percent: number };
+  };
+  summary: string;
+} {
+  const now = Date.now();
+  const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000);
+  const twoWeeksAgo = now - (14 * 24 * 60 * 60 * 1000);
+
+  // Current week sessions
+  const currentWeekSessions = sessions.filter(s => s.timestamp >= oneWeekAgo);
+
+  // Previous week sessions
+  const previousWeekSessions = sessions.filter(
+    s => s.timestamp >= twoWeeksAgo && s.timestamp < oneWeekAgo
+  );
+
+  const computeWeekStats = (weekSessions: Session[]) => {
+    if (weekSessions.length === 0) {
+      return {
+        sessions: 0,
+        touches: 0,
+        avgTouches: 0,
+        completionRate: 0,
+        topTheme: 'None'
+      };
+    }
+
+    const totalTouches = weekSessions.reduce((sum, s) => sum + s.touches, 0);
+    const completed = weekSessions.filter(s => s.completedFull).length;
+    const topTheme = getMostFrequent(weekSessions.map(s => s.theme));
+
+    return {
+      sessions: weekSessions.length,
+      touches: totalTouches,
+      avgTouches: Math.round(totalTouches / weekSessions.length),
+      completionRate: Math.round((completed / weekSessions.length) * 100),
+      topTheme
+    };
+  };
+
+  const currentWeek = computeWeekStats(currentWeekSessions);
+  const previousWeek = computeWeekStats(previousWeekSessions);
+
+  const calculateChange = (current: number, previous: number) => {
+    if (previous === 0) return { value: current, percent: 0 };
+    const value = current - previous;
+    const percent = Math.round((value / previous) * 100);
+    return { value, percent };
+  };
+
+  const changes = {
+    sessions: calculateChange(currentWeek.sessions, previousWeek.sessions),
+    touches: calculateChange(currentWeek.touches, previousWeek.touches),
+    avgTouches: calculateChange(currentWeek.avgTouches, previousWeek.avgTouches),
+    completionRate: calculateChange(currentWeek.completionRate, previousWeek.completionRate)
+  };
+
+  // Generate summary
+  let summary = '';
+  if (previousWeek.sessions === 0) {
+    summary = 'First week of data! Keep playing to see trends.';
+  } else if (changes.touches.percent > 10) {
+    summary = `Great progress! Engagement is up ${changes.touches.percent}% this week.`;
+  } else if (changes.touches.percent < -10) {
+    summary = `Engagement dropped ${Math.abs(changes.touches.percent)}% this week. Try introducing new themes!`;
+  } else {
+    summary = 'Steady engagement. Maintaining consistent play patterns.';
+  }
+
+  return {
+    currentWeek,
+    previousWeek,
+    changes,
+    summary
+  };
+}

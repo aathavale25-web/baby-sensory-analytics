@@ -41,3 +41,9 @@ verify-table.js
 migrate-to-supabase.js
 test-supabase-mcp.js
 supabase/.temp/
+
+# Development utility scripts
+cleanup-test-data.js
+create-test-session.js
+show-weekly-summary.js
+test-supabase-mcp.js
