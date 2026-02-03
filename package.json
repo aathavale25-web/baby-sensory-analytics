@@ -10,11 +10,16 @@
     "dev": "tsc && node dist/index.js",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
   },
-  "keywords": ["mcp", "analytics", "baby-sensory"],
+  "keywords": [
+    "mcp",
+    "analytics",
+    "baby-sensory"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4"
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@supabase/supabase-js": "^2.94.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

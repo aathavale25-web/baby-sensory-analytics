@@ -4,10 +4,10 @@
 
 import { randomUUID } from 'crypto';
 import { Session, CreateSessionRequest } from '../types.js';
-import { SessionDatabase } from '../db/indexeddb.js';
+import { ISessionDatabase } from '../db/interface.js';
 
 export async function createSession(
-  db: SessionDatabase,
+  db: ISessionDatabase,
   request: CreateSessionRequest
 ): Promise<Session> {
   const session: Session = {
@@ -20,14 +20,14 @@ export async function createSession(
 }
 
 export async function getSession(
-  db: SessionDatabase,
+  db: ISessionDatabase,
   id: string
 ): Promise<Session | null> {
   return await db.getSession(id);
 }
 
 export async function listSessions(
-  db: SessionDatabase,
+  db: ISessionDatabase,
   limit?: number
 ): Promise<Session[]> {
   if (limit) {
@@ -37,7 +37,7 @@ export async function listSessions(
 }
 
 export async function getRecentSessions(
-  db: SessionDatabase,
+  db: ISessionDatabase,
   days: number = 7
 ): Promise<Session[]> {
   const since = Date.now() - (days * 24 * 60 * 60 * 1000);
@@ -45,14 +45,14 @@ export async function getRecentSessions(
 }
 
 export async function deleteSession(
-  db: SessionDatabase,
+  db: ISessionDatabase,
   id: string
 ): Promise<boolean> {
   return await db.deleteSession(id);
 }
 
 export async function exportAllSessions(
-  db: SessionDatabase
+  db: ISessionDatabase
 ): Promise<string> {
   const sessions = await db.getAllSessions();
   return JSON.stringify({

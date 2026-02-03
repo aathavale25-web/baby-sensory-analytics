@@ -16,7 +16,7 @@ import {
   McpError
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { SessionDatabase } from './db/indexeddb.js';
+import { SupabaseSessionDatabase } from './db/supabase.js';
 import { CreateSessionRequest } from './types.js';
 import {
   createSession,
@@ -32,8 +32,8 @@ import {
   computeTimingPatterns
 } from './resources/insights.js';
 
-// Initialize database
-const db = new SessionDatabase();
+// Initialize database (now using Supabase instead of local file)
+const db = new SupabaseSessionDatabase();
 
 // Create server instance
 const server = new Server(

@@ -1,16 +1,18 @@
 # Baby Sensory Analytics MCP Server
 
-Local-first analytics server for Baby Sensory World application. Tracks engagement patterns, favorite themes, colors, and provides insights to optimize your baby's sensory experience.
+Cloud-powered analytics server for Baby Sensory World application. Tracks engagement patterns, favorite themes, colors, and provides AI-powered insights to optimize your baby's sensory experience.
 
 ## Features
 
-- **100% Local Storage** - All data stored locally, no cloud, no tracking
-- **Session Tracking** - Records every 20-minute play session with full engagement metrics
-- **Smart Insights** - Analyzes favorite themes, colors, objects, and best play times
-- **MCP Integration** - Accessible via Model Context Protocol for AI assistants
-- **Privacy First** - Your baby's data never leaves your machine
+- **☁️ Cloud Storage** - Supabase PostgreSQL database for reliable, accessible data
+- **📊 Session Tracking** - Records every 20-minute play session with full engagement metrics
+- **🧠 Smart Insights** - AI analyzes favorite themes, colors, objects, and best play times
+- **🤖 MCP Integration** - Accessible via Model Context Protocol for Claude and other AI assistants
+- **🔒 Privacy First** - Your data, your database, full control
 
-## Installation
+## Setup
+
+### 1. Install Dependencies
 
 ```bash
 cd baby-sensory-analytics
@@ -18,56 +20,80 @@ npm install
 npm run build
 ```
 
-## Usage
+### 2. Set Up Supabase Database
 
-### 1. Start the MCP Server
+The MCP server uses Supabase for cloud storage. If you haven't already:
 
-The MCP server is automatically started by Claude Code when configured in `~/.claude/mcp_settings.json`:
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Run the table creation SQL (in `supabase/migrations/001_create_sessions_table.sql`)
+4. Get your project URL and anon key from Project Settings > API
+
+The database credentials are configured in `src/db/supabase.config.ts` or can be set via environment variables:
+
+```bash
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_ANON_KEY="your-anon-key-here"
+```
+
+### 3. Configure MCP Server
+
+Add to `~/.claude/mcp_settings.json`:
 
 ```json
 {
   "mcpServers": {
     "baby-sensory-analytics": {
       "command": "node",
-      "args": ["/path/to/baby-sensory-analytics/dist/index.js"],
-      "env": {}
+      "args": ["/Users/your-username/path/to/baby-sensory-analytics/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "https://your-project.supabase.co",
+        "SUPABASE_ANON_KEY": "your-anon-key"
+      }
     }
   }
 }
 ```
 
-### 2. Play Sessions in the Web App
+**Note:** The keys in `env` override the defaults in `supabase.config.ts`.
 
-Open the Baby Sensory World application and complete 20-minute play sessions. Session data is automatically logged to:
-- Browser IndexedDB
-- Browser localStorage (backup)
+## Usage
 
-### 3. Sync Browser Data to MCP Server
+### 1. Web App Integration
 
-The MCP server reads from `~/.baby-sensory-sessions.json`. To sync browser data:
+Your Baby Sensory World web app needs to write sessions directly to Supabase. Add the Supabase client to your web app:
 
-#### Option A: Manual Sync (Current)
-
-1. Open browser console (F12) on the Baby Sensory World app
-2. Run this command:
-   ```javascript
-   copy(localStorage.getItem('baby-sensory-sessions'))
-   ```
-3. Save the copied JSON to `~/.baby-sensory-sessions.json`
-
-#### Option B: Automated Sync (Future Enhancement)
-
-Run the sync script periodically:
 ```bash
-node sync-browser-sessions.js
+npm install @supabase/supabase-js
 ```
 
-Or set up a cron job to sync every hour:
-```bash
-0 * * * * cd /path/to/baby-sensory-analytics && node sync-browser-sessions.js
+Then configure it to save sessions after each play session:
+
+```javascript
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://your-project.supabase.co',
+  'your-anon-key'
+);
+
+// After a session completes
+await supabase.from('sessions').insert({
+  id: sessionId,
+  timestamp: Date.now(),
+  theme: 'Ocean',
+  duration: 1200,
+  touches: 156,
+  color_counts: { "#4ECDC4": 45, "#0088FF": 38 },
+  object_counts: { "🐟": 48, "🫧": 35 },
+  nursery_rhymes_played: ["Twinkle Twinkle"],
+  streaks: 12,
+  milestones: [10, 25, 50, 100, 150],
+  completed_full: true
+});
 ```
 
-### 4. Query Insights via MCP
+### 2. Query Insights via MCP
 
 Once data is synced, you can query insights using Claude or any MCP client:
 
@@ -157,34 +183,39 @@ node dist/index.js 2> debug.log
 ┌─────────────────────────┐
 │  Baby Sensory Web App   │
 │  (React + Vite)         │
-│  - IndexedDB            │
-│  - localStorage backup  │
+│  - Netlify hosted       │
 └────────────┬────────────┘
              │
-             │ Manual sync or
-             │ automated script
+             │ HTTP/REST API
+             │ (Supabase Client)
              ▼
 ┌─────────────────────────┐
-│  ~/.baby-sensory-       │
-│  sessions.json          │
-│  (Local file)           │
+│     Supabase Cloud      │
+│  - PostgreSQL Database  │
+│  - Real-time sync       │
+│  - Row Level Security   │
 └────────────┬────────────┘
              │
-             │ Read/Write
+             │ Read (Supabase Client)
              ▼
 ┌─────────────────────────┐
 │  Baby Sensory Analytics │
-│  MCP Server             │
+│  MCP Server (Local)     │
 │  (Node.js)              │
 └────────────┬────────────┘
              │
-             │ MCP Protocol
+             │ MCP Protocol (stdio)
              ▼
 ┌─────────────────────────┐
-│  Claude / MCP Clients   │
-│  (AI Assistants)        │
+│  Claude Code / AI       │
+│  (MCP Clients)          │
 └─────────────────────────┘
 ```
+
+**Data Flow:**
+1. Web app → Supabase (sessions written after play)
+2. MCP Server → Supabase (reads sessions for analytics)
+3. Claude Code → MCP Server (queries insights via MCP protocol)
 
 ## Future Enhancements
 

@@ -7,10 +7,11 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { Session } from '../types.js';
+import { ISessionDatabase } from './interface.js';
 
 const DB_FILE_PATH = path.join(process.env.HOME || '.', '.baby-sensory-sessions.json');
 
-export class SessionDatabase {
+export class SessionDatabase implements ISessionDatabase {
   private sessions: Session[] = [];
   private loaded = false;
 

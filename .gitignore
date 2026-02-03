@@ -31,3 +31,13 @@ yarn-error.log*
 
 # Test coverage
 coverage/
+
+# Supabase
+.supabase/
+
+# Temporary test/migration scripts
+create-tables.js
+verify-table.js
+migrate-to-supabase.js
+test-supabase-mcp.js
+supabase/.temp/
