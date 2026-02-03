@@ -2,6 +2,8 @@
 
 Cloud-powered analytics server for Baby Sensory World application. Tracks engagement patterns, favorite themes, colors, and provides AI-powered insights to optimize your baby's sensory experience.
 
+📖 **[Read HOW_IT_WORKS.md](./HOW_IT_WORKS.md)** for a comprehensive guide with diagrams explaining the full system architecture and how the MCP server integrates with the web application.
+
 ## Features
 
 - **☁️ Cloud Storage** - Supabase PostgreSQL database for reliable, accessible data
